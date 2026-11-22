@@ -50,20 +50,25 @@ def test_cd(tmp_path, capfd):
     subdir.mkdir()
     subdir.joinpath('a').write_text('a')
     subdir.joinpath('b').write_text('b')
+    subdir.joinpath('--fix').write_text('option-looking filename')
 
     with contextlib.chdir(tmp_path):
         ret = main((
             'cd', 'subdir',
             sys.executable, '-c',
             'import os; print(os.getcwd());'
+            'import sys; print(sys.argv[1:]);'
             'import sys; [print(open(f).read()) for f in sys.argv[1:]]',
             '--',
-            'subdir/a', 'subdir/b',
+            'subdir/a', 'subdir/b', 'subdir/--fix',
         ))
 
     assert ret == 0
     out, err = capfd.readouterr()
-    assert _norm(out) == f'{subdir}\na\nb\n'
+    assert _norm(out) == (
+        f"{subdir}\n['a', 'b', './--fix']\n"
+        'a\nb\noption-looking filename\n'
+    )
     assert err == ''
 
 
